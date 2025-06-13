@@ -1,0 +1,9 @@
+---
+description: How to add and use Python dependencies
+globs: 
+alwaysApply: true
+---
+- for Python dependencies the uv package manager is used
+- for new production dependencies use `uv add <package-name>`
+- for new development dependencies use `uv add --dev <package-name>`
+- Python CLI tools shall be called within uv's virtual environment, e.g. `ev run python main.py`

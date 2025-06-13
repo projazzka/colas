@@ -1,0 +1,12 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+- by default, do not use docstrings or function or module comments
+- reserve comments only for rare edge cases that would not be understood otherwise
+- use `list`, `dict`,... instead of legacy types in `typing`
+- use `| None`  instead of `Optional`  whenever possible
+
+
+
