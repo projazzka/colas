@@ -13,8 +13,6 @@ class Quincy:
         async def wrapper(*args, **kwargs):
             return await self._tasks[func.__name__](*args, **kwargs)
 
-        # Store reference to this Quincy instance
-        wrapper._quincy = self
         return wrapper
 
     def run(self):
