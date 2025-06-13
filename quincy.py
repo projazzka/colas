@@ -11,9 +11,12 @@ class Quincy:
         self._tasks[func.__name__] = func
 
         async def wrapper(*args, **kwargs):
-            return await self._tasks[func.__name__](*args, **kwargs)
+            return await self._execute_handler(func.__name__, *args, **kwargs)
 
         return wrapper
+
+    async def _execute_handler(self, name: str, *args, **kwargs):
+        return await self._tasks[name](*args, **kwargs)
 
     def run(self):
         """Run the Quincy application."""
