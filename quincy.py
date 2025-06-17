@@ -54,9 +54,15 @@ class Queue:
             )
             await db.commit()
 
-    async def push(self, name: str, *args, **kwargs) -> UUID:
-        """Push a task to the queue. Returns the task_id as UUID object."""
-        task_id = uuid.uuid4()
+    async def push(self, task_id: UUID, name: str, *args, **kwargs) -> None:
+        """Push a task to the queue.
+
+        Args:
+            task_id: UUID to identify this task
+            name: Name of the task
+            *args: Positional arguments for the task
+            **kwargs: Keyword arguments for the task
+        """
         task_id_bytes = task_id.bytes
         payload = msgpack.packb((name, args, kwargs))
 
@@ -66,7 +72,6 @@ class Queue:
                 (task_id_bytes, payload),
             )
             await db.commit()
-        return task_id
 
     async def pop(self) -> tuple[UUID, tuple[str, tuple, dict]] | None:
         """Pop the oldest task from the queue and delete it atomically.
