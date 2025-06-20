@@ -41,3 +41,26 @@ async def test_pop_from_empty_queue(temp_db_file):
     await queue.init()
 
     assert await queue.pop() is None
+
+
+@pytest.mark.asyncio
+async def test_queue_isolation(temp_db_file):
+    db_file = str(temp_db_file)
+    queue1 = Queue(db_file, "queue_1")
+    queue2 = Queue(db_file, "queue_2")
+
+    await queue1.init()
+    await queue2.init()
+
+    # Push to the first queue
+    task_id = uuid.uuid4()
+    await queue1.push(task_id, "test_task", *[], **{})
+
+    # The second queue should be empty
+    assert await queue2.pop() is None
+
+    # The first queue should have the task
+    popped_task = await queue1.pop()
+    assert popped_task is not None
+    popped_task_id, _ = popped_task
+    assert popped_task_id == task_id
