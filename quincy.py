@@ -35,9 +35,6 @@ class Queue:
         self.queue_name = queue_name
 
     async def init(self):
-        await self._ensure_table()
-
-    async def _ensure_table(self):
         async with aiosqlite.connect(self.filename) as db:
             await db.execute(
                 f"""
@@ -91,9 +88,6 @@ class Results:
         self.table_name = table_name
 
     async def init(self):
-        await self._ensure_table()
-
-    async def _ensure_table(self):
         async with aiosqlite.connect(self.filename) as db:
             await db.execute(
                 f"""
