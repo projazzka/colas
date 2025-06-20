@@ -9,3 +9,12 @@ dependencies = [
     "asyncio>=3.4.3",
     "msgpack>=1.1.1",
 ]
+
+[tool.setuptools]
+py-modules = ["quincy"]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=8.4.1",
+    "pytest-asyncio>=1.0.0",
+]
