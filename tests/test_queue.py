@@ -33,3 +33,11 @@ async def test_push_and_pop(temp_db_file):
     assert popped_kwargs_2 == {"b": 6}
 
     assert await queue.pop() is None
+
+
+@pytest.mark.asyncio
+async def test_pop_from_empty_queue(temp_db_file):
+    queue = Queue(str(temp_db_file), "test_queue")
+    await queue.init()
+
+    assert await queue.pop() is None
