@@ -1,3 +1,5 @@
+import asyncio
+import threading
 import uuid
 
 import pytest
@@ -64,3 +66,45 @@ async def test_queue_isolation(temp_db_file):
     assert popped_task is not None
     popped_task_id, _ = popped_task
     assert popped_task_id == task_id
+
+
+def worker(queue, results_list):
+    async def pop_tasks():
+        while True:
+            task = await queue.pop()
+            if task is None:
+                break
+            results_list.append(task)
+
+    asyncio.run(pop_tasks())
+
+
+@pytest.mark.asyncio
+async def test_threaded_concurrent_pop(temp_db_file):
+    num_tasks = 100
+    num_workers = 10
+    db_file = str(temp_db_file)
+    queue = Queue(db_file, "concurrent_queue")
+    await queue.init()
+
+    # Populate the queue
+    for i in range(num_tasks):
+        task_id = uuid.uuid4()
+        # Using the loop counter as the "name" to check for uniqueness later
+        await queue.push(task_id, str(i), *[], **{})
+
+    results = []
+    threads = []
+    for _ in range(num_workers):
+        thread = threading.Thread(target=worker, args=(queue, results))
+        threads.append(thread)
+        thread.start()
+
+    for thread in threads:
+        thread.join()
+
+    # Verify that all tasks were popped exactly once
+    assert len(results) == num_tasks
+    # Check for uniqueness of the task "name"
+    popped_task_names = {task[1][0] for task in results}
+    assert len(popped_task_names) == num_tasks
