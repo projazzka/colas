@@ -17,4 +17,5 @@ py-modules = ["quincy"]
 dev-dependencies = [
     "pytest>=8.4.1",
     "pytest-asyncio>=1.0.0",
+    "freezegun>=1.5.2",
 ]

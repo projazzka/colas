@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
 from uuid import UUID
 
@@ -108,6 +108,17 @@ class Results:
             await db.execute(
                 f"INSERT INTO {self.table_name} (task_id, payload, created_at) VALUES (?, ?, ?)",
                 (task_id.bytes, payload, created_at),
+            )
+            await db.commit()
+
+    async def clean(self, ttl: int) -> None:
+        cutoff = datetime.now(timezone.utc) - timedelta(seconds=ttl)
+        cutoff_str = cutoff.isoformat()
+
+        async with aiosqlite.connect(self.filename) as db:
+            await db.execute(
+                f"DELETE FROM {self.table_name} WHERE created_at < ?",
+                (cutoff_str,),
             )
             await db.commit()
 
