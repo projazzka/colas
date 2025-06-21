@@ -1,6 +1,9 @@
 from typing import Any, Callable, Coroutine
+from uuid import uuid4
 
 from .queue import Queue
+from .results import Results
+from .task import Task
 
 
 class Colas:
@@ -10,7 +13,9 @@ class Colas:
 
     async def init(self) -> None:
         self.queue = Queue(self.filename, "tasks")
+        self.results = Results(self.filename, "results")
         await self.queue.init()
+        await self.results.init()
 
     def task(
         self, func: Callable[..., Coroutine[Any, Any, Any]]
@@ -23,7 +28,17 @@ class Colas:
         return wrapper
 
     async def _execute_handler(self, name: str, *args: Any, **kwargs: Any) -> Any:
-        return await self._tasks[name](*args, **kwargs)
+        task = Task(
+            task_id=uuid4(),
+            name=name,
+            args=args,
+            kwargs=kwargs,
+        )
+        await self.queue.push(task)
+        return await self.results.wait(task.task_id)
 
-    def run(self) -> None:
-        pass  # For now, just a placeholder
+    async def run(self) -> None:
+        async for task in self.queue.tasks():
+            func = self._tasks[task.name]
+            result = await func(*task.args, **task.kwargs)
+            await self.results.store(task.task_id, result)
