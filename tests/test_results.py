@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from freezegun import freeze_time
 
-from colas.app import Results
+from colas import Results
 
 
 @pytest.mark.asyncio
@@ -139,7 +139,7 @@ async def test_wait_for_result_with_polling(temp_db_file):
     await results.init()
     task_id = uuid.uuid4()
 
-    with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+    with patch("colas.results.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
         mock_sleep.side_effect = asyncio.TimeoutError("Stop waiting")
 
         with pytest.raises(asyncio.TimeoutError):

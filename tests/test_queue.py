@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from colas.app import Queue, Task
+from colas import Queue, Task
 
 
 @pytest.mark.asyncio
@@ -149,7 +149,7 @@ async def test_tasks_generator_sleeps(temp_db_file):
     class StopLoop(Exception):
         pass
 
-    with patch("colas.app.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+    with patch("colas.queue.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
         mock_sleep.side_effect = StopLoop
 
         with pytest.raises(StopLoop):

@@ -2,18 +2,20 @@
 
 A modern task queue framework.
 
-[X] fully async
-[X] supports database backends for queues
+  - [X] fully async
+  - [X] supports database backends for queues
 
 Author: Igor Prochazka (@projazzka)
 
 ## Installation
 
-TBD
+```
+pip install colas
+```
 
 ## Usage
 
-````
+```
 from colas import Colas
 
 app = Colas(filename="quincy.db")
@@ -29,9 +31,9 @@ if __name__ == "__main__":
 
 On the client side simply do
 ```
-from tasks import app
+from tasks import multiply
 
 result = await multiply(2, 3)
-````
+```
 
 
