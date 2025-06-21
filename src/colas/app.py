@@ -10,10 +10,10 @@ class Colas:
     def __init__(self, filename: str):
         self.filename = filename
         self._tasks: dict[str, Callable[..., Coroutine[Any, Any, Any]]] = {}
-
-    async def init(self) -> None:
         self.queue = Queue(self.filename, "tasks")
         self.results = Results(self.filename, "results")
+
+    async def init(self) -> None:
         await self.queue.init()
         await self.results.init()
 
