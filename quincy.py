@@ -108,9 +108,10 @@ class Queue:
 
 
 class Results:
-    def __init__(self, filename: str, table_name: str):
+    def __init__(self, filename: str, table_name: str, polling_interval: float = 0.1):
         self.filename = filename
         self.table_name = table_name
+        self.polling_interval = polling_interval
 
     async def init(self):
         async with aiosqlite.connect(self.filename) as db:
@@ -146,6 +147,13 @@ class Results:
                 (cutoff_str,),
             )
             await db.commit()
+
+    async def wait(self, task_id: UUID) -> Any:
+        while True:
+            results = await self.retrieve([task_id])
+            if task_id in results:
+                return results[task_id]
+            await asyncio.sleep(self.polling_interval)
 
     async def retrieve(self, task_ids: list[UUID]) -> dict[UUID, Any]:
         if not task_ids:

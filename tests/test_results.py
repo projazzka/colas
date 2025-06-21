@@ -1,5 +1,7 @@
+import asyncio
 import uuid
 from datetime import timedelta
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from freezegun import freeze_time
@@ -116,3 +118,31 @@ async def test_clean(temp_db_file):
         assert len(polled_results) == 1
         assert task_id_1 not in polled_results
         assert polled_results[task_id_2] == "new_result"
+
+
+@pytest.mark.asyncio
+async def test_wait_for_result_immediate(temp_db_file):
+    results = Results(str(temp_db_file), "test_results")
+    await results.init()
+
+    task_id = uuid.uuid4()
+    expected_result = "the result"
+    await results.store(task_id, expected_result)
+
+    retrieved_result = await results.wait(task_id)
+    assert retrieved_result == expected_result
+
+
+@pytest.mark.asyncio
+async def test_wait_for_result_with_polling(temp_db_file):
+    results = Results(str(temp_db_file), "test_results", polling_interval=10)
+    await results.init()
+    task_id = uuid.uuid4()
+
+    with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+        mock_sleep.side_effect = asyncio.TimeoutError("Stop waiting")
+
+        with pytest.raises(asyncio.TimeoutError):
+            await results.wait(task_id)
+
+        mock_sleep.assert_awaited_once_with(10)
