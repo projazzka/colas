@@ -1,6 +1,6 @@
-import quincy
+import colas
 
-app = quincy.Quincy(filename="quincy.db")
+app = colas.Colas(filename="quincy.db")
 
 
 @app.task

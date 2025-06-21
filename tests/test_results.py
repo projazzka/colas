@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from freezegun import freeze_time
 
-from quincy import Results
+from colas.app import Results
 
 
 @pytest.mark.asyncio

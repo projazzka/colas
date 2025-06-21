@@ -1,9 +1,9 @@
-# Quincy
+# Colas
 
-A fresh new task queue framework.
+A modern task queue framework.
 
 [X] fully async
-[X] supports database backends for queues (including Sqlite!)
+[X] supports database backends for queues
 
 Author: Igor Prochazka (@projazzka)
 
@@ -14,9 +14,9 @@ TBD
 ## Usage
 
 ````
-import quincy
+from colas import Colas
 
-app = quincy.Quincy(filename="quincy.db")
+app = Colas(filename="quincy.db")
 
 @app.task
 async def multiply(a: int, b: int) -> int:
