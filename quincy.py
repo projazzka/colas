@@ -147,7 +147,7 @@ class Results:
             )
             await db.commit()
 
-    async def poll(self, task_ids: list[UUID]) -> dict[UUID, Any]:
+    async def retrieve(self, task_ids: list[UUID]) -> dict[UUID, Any]:
         if not task_ids:
             return {}
 
