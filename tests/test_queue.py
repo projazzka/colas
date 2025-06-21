@@ -4,7 +4,7 @@ import uuid
 
 import pytest
 
-from quincy import Queue
+from quincy import Queue, Task
 
 
 @pytest.mark.asyncio
@@ -12,27 +12,29 @@ async def test_push_and_pop(temp_db_file):
     queue = Queue(str(temp_db_file), "test_queue")
     await queue.init()
 
-    task_id_1 = uuid.uuid4()
-    await queue.push(task_id_1, "test_task_1", *[1, 2], **{"a": 3})
+    task_1 = Task(
+        task_id=uuid.uuid4(), name="test_task_1", args=(1, 2), kwargs={"a": 3}
+    )
+    await queue.push(task_1)
 
-    task_id_2 = uuid.uuid4()
-    await queue.push(task_id_2, "test_task_2", *[4, 5], **{"b": 6})
+    task_2 = Task(
+        task_id=uuid.uuid4(), name="test_task_2", args=(4, 5), kwargs={"b": 6}
+    )
+    await queue.push(task_2)
 
     popped_task_1 = await queue.pop()
     assert popped_task_1 is not None
-    popped_task_id_1, (popped_name_1, popped_args_1, popped_kwargs_1) = popped_task_1
-    assert popped_task_id_1 == task_id_1
-    assert popped_name_1 == "test_task_1"
-    assert popped_args_1 == [1, 2]
-    assert popped_kwargs_1 == {"a": 3}
+    assert popped_task_1.task_id == task_1.task_id
+    assert popped_task_1.name == "test_task_1"
+    assert popped_task_1.args == (1, 2)
+    assert popped_task_1.kwargs == {"a": 3}
 
     popped_task_2 = await queue.pop()
     assert popped_task_2 is not None
-    popped_task_id_2, (popped_name_2, popped_args_2, popped_kwargs_2) = popped_task_2
-    assert popped_task_id_2 == task_id_2
-    assert popped_name_2 == "test_task_2"
-    assert popped_args_2 == [4, 5]
-    assert popped_kwargs_2 == {"b": 6}
+    assert popped_task_2.task_id == task_2.task_id
+    assert popped_task_2.name == "test_task_2"
+    assert popped_task_2.args == (4, 5)
+    assert popped_task_2.kwargs == {"b": 6}
 
     assert await queue.pop() is None
 
@@ -55,8 +57,8 @@ async def test_queue_isolation(temp_db_file):
     await queue2.init()
 
     # Push to the first queue
-    task_id = uuid.uuid4()
-    await queue1.push(task_id, "test_task", *[], **{})
+    task = Task(task_id=uuid.uuid4(), name="test_task", args=(), kwargs={})
+    await queue1.push(task)
 
     # The second queue should be empty
     assert await queue2.pop() is None
@@ -64,8 +66,7 @@ async def test_queue_isolation(temp_db_file):
     # The first queue should have the task
     popped_task = await queue1.pop()
     assert popped_task is not None
-    popped_task_id, _ = popped_task
-    assert popped_task_id == task_id
+    assert popped_task.task_id == task.task_id
 
 
 def worker(queue, results_list):
@@ -88,10 +89,11 @@ async def test_threaded_concurrent_pop(temp_db_file):
     await queue.init()
 
     # Populate the queue
+    task_ids = []
     for i in range(num_tasks):
-        task_id = uuid.uuid4()
-        # Using the loop counter as the "name" to check for uniqueness later
-        await queue.push(task_id, str(i), *[], **{})
+        task = Task(task_id=uuid.uuid4(), name=str(i), args=(), kwargs={})
+        task_ids.append(task.task_id)
+        await queue.push(task)
 
     results = []
     threads = []
@@ -106,5 +108,5 @@ async def test_threaded_concurrent_pop(temp_db_file):
     # Verify that all tasks were popped exactly once
     assert len(results) == num_tasks
     # Check for uniqueness of the task "name"
-    popped_task_names = {task[1][0] for task in results}
-    assert len(popped_task_names) == num_tasks
+    popped_task_ids = {task.task_id for task in results}
+    assert popped_task_ids == set(task_ids)

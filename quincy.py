@@ -1,9 +1,18 @@
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
 from uuid import UUID
 
 import aiosqlite
 import msgpack  # type: ignore
+
+
+@dataclass
+class Task:
+    task_id: UUID
+    name: str
+    args: tuple
+    kwargs: dict
 
 
 class Quincy:
@@ -47,9 +56,9 @@ class Queue:
             )
             await db.commit()
 
-    async def push(self, task_id: UUID, name: str, *args, **kwargs) -> None:
-        task_id_bytes = task_id.bytes
-        payload = msgpack.packb((name, args, kwargs))
+    async def push(self, task: Task) -> None:
+        task_id_bytes = task.task_id.bytes
+        payload = msgpack.packb((task.name, task.args, task.kwargs))
 
         async with aiosqlite.connect(self.filename) as db:
             await db.execute(
@@ -58,7 +67,7 @@ class Queue:
             )
             await db.commit()
 
-    async def pop(self) -> tuple[UUID, tuple[str, tuple, dict]] | None:
+    async def pop(self) -> Task | None:
         async with aiosqlite.connect(self.filename) as db:
             async with db.execute(
                 f"""
@@ -79,7 +88,13 @@ class Queue:
 
                 task_id_bytes, payload = row
                 task_id = UUID(bytes=task_id_bytes)
-                return task_id, msgpack.unpackb(payload)
+                name, args, kwargs = msgpack.unpackb(payload)
+                return Task(
+                    task_id=task_id,
+                    name=name,
+                    args=tuple(args),
+                    kwargs=kwargs,
+                )
 
 
 class Results:
