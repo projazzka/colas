@@ -1,6 +1,7 @@
+import asyncio
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Any, Callable
+from typing import Any, AsyncGenerator, Callable
 from uuid import UUID
 
 import aiosqlite
@@ -39,9 +40,10 @@ class Quincy:
 
 
 class Queue:
-    def __init__(self, filename: str, queue_name: str):
+    def __init__(self, filename: str, queue_name: str, polling_interval: float = 0.1):
         self.filename = filename
         self.queue_name = queue_name
+        self.polling_interval = polling_interval
 
     async def init(self):
         async with aiosqlite.connect(self.filename) as db:
@@ -95,6 +97,14 @@ class Queue:
                     args=tuple(args),
                     kwargs=kwargs,
                 )
+
+    async def tasks(self) -> AsyncGenerator[Task, None]:
+        while True:
+            task = await self.pop()
+            if task:
+                yield task
+            else:
+                await asyncio.sleep(self.polling_interval)
 
 
 class Results:

@@ -1,6 +1,7 @@
 import asyncio
 import threading
 import uuid
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -110,3 +111,48 @@ async def test_threaded_concurrent_pop(temp_db_file):
     # Check for uniqueness of the task "name"
     popped_task_ids = {task.task_id for task in results}
     assert popped_task_ids == set(task_ids)
+
+
+@pytest.mark.asyncio
+async def test_tasks_generator(temp_db_file):
+    queue = Queue(str(temp_db_file), "test_queue")
+    await queue.init()
+
+    task_1 = Task(
+        task_id=uuid.uuid4(), name="test_task_1", args=(1, 2), kwargs={"a": 3}
+    )
+    await queue.push(task_1)
+
+    task_2 = Task(
+        task_id=uuid.uuid4(), name="test_task_2", args=(4, 5), kwargs={"b": 6}
+    )
+    await queue.push(task_2)
+
+    received_tasks = []
+    async for task in queue.tasks():
+        received_tasks.append(task)
+        if len(received_tasks) == 2:
+            break
+
+    assert len(received_tasks) == 2
+    assert received_tasks[0].task_id == task_1.task_id
+    assert received_tasks[1].task_id == task_2.task_id
+
+
+@pytest.mark.asyncio
+async def test_tasks_generator_sleeps(temp_db_file):
+    polling_interval = 10.0
+    queue = Queue(str(temp_db_file), "test_queue", polling_interval=polling_interval)
+    await queue.init()
+    tasks_gen = queue.tasks()
+
+    class StopLoop(Exception):
+        pass
+
+    with patch("quincy.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+        mock_sleep.side_effect = StopLoop
+
+        with pytest.raises(StopLoop):
+            await anext(tasks_gen)
+
+        mock_sleep.assert_awaited_once_with(polling_interval)
