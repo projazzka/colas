@@ -65,8 +65,8 @@ async def test_push_and_pop(implementation: Queue):
 
 
 @pytest.mark.asyncio
-async def test_pop_from_empty_queue(temp_db_file):
-    queue = SqliteQueue(str(temp_db_file), "test_queue")
+async def test_pop_from_empty_queue(implementation: Queue):
+    queue = implementation
     await queue.init()
 
     assert await queue.pop() is None
@@ -106,11 +106,10 @@ def worker(queue, results_list):
 
 
 @pytest.mark.asyncio
-async def test_threaded_concurrent_pop(temp_db_file):
+async def test_threaded_concurrent_pop(implementation: Queue):
     num_tasks = 100
     num_workers = 10
-    db_file = str(temp_db_file)
-    queue = SqliteQueue(db_file, "concurrent_queue")
+    queue = implementation
     await queue.init()
 
     # Populate the queue
@@ -120,7 +119,7 @@ async def test_threaded_concurrent_pop(temp_db_file):
         task_ids.append(task.task_id)
         await queue.push(task)
 
-    results = []
+    results: list[Task] = []
     threads = []
     for _ in range(num_workers):
         thread = threading.Thread(target=worker, args=(queue, results))
@@ -138,8 +137,8 @@ async def test_threaded_concurrent_pop(temp_db_file):
 
 
 @pytest.mark.asyncio
-async def test_tasks_generator(temp_db_file):
-    queue = SqliteQueue(str(temp_db_file), "test_queue")
+async def test_tasks_generator(implementation: Queue):
+    queue = implementation
     await queue.init()
 
     task_1 = Task(
@@ -164,11 +163,10 @@ async def test_tasks_generator(temp_db_file):
 
 
 @pytest.mark.asyncio
-async def test_tasks_generator_sleeps(temp_db_file):
+async def test_tasks_generator_sleeps(implementation: Queue):
     polling_interval = 10.0
-    queue = SqliteQueue(
-        str(temp_db_file), "test_queue", polling_interval=polling_interval
-    )
+    implementation.polling_interval = polling_interval
+    queue = implementation
     await queue.init()
     tasks_gen = queue.tasks()
 
