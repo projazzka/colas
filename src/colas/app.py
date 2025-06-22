@@ -1,7 +1,7 @@
 from typing import Any, Callable, Coroutine
 from uuid import uuid4
 
-from .queue import Queue
+from .queue import SqliteQueue
 from .results import Results
 from .task import Task
 
@@ -10,7 +10,7 @@ class Colas:
     def __init__(self, filename: str):
         self.filename = filename
         self._tasks: dict[str, Callable[..., Coroutine[Any, Any, Any]]] = {}
-        self.queue = Queue(self.filename, "tasks")
+        self.queue = SqliteQueue(self.filename, "tasks")
         self.results = Results(self.filename, "results")
 
     async def init(self) -> None:

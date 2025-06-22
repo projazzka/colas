@@ -1,16 +1,40 @@
 import asyncio
 import threading
 import uuid
+from typing import Iterator
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from testcontainers.postgres import PostgresContainer  # type: ignore
 
-from colas import Queue, Task
+from colas import PostgresQueue, Queue, SqliteQueue, Task
+
+
+@pytest.fixture
+def sqlite_queue(temp_db_file) -> SqliteQueue:
+    return SqliteQueue(str(temp_db_file), "test_queue")
+
+
+@pytest.fixture
+def postgres_container() -> Iterator[PostgresContainer]:
+    with PostgresContainer("postgres:17-alpine") as postgres:
+        yield postgres
+
+
+@pytest.fixture
+def postgres_queue(postgres_container: PostgresContainer) -> PostgresQueue:
+    dsn = postgres_container.get_connection_url(driver=None)
+    return PostgresQueue(dsn, "test_queue")
+
+
+@pytest.fixture(params=["sqlite_queue", "postgres_queue"])
+def implementation(request) -> Queue:
+    return request.getfixturevalue(request.param)
 
 
 @pytest.mark.asyncio
-async def test_push_and_pop(temp_db_file):
-    queue = Queue(str(temp_db_file), "test_queue")
+async def test_push_and_pop(implementation: Queue):
+    queue = implementation
     await queue.init()
 
     task_1 = Task(
@@ -42,7 +66,7 @@ async def test_push_and_pop(temp_db_file):
 
 @pytest.mark.asyncio
 async def test_pop_from_empty_queue(temp_db_file):
-    queue = Queue(str(temp_db_file), "test_queue")
+    queue = SqliteQueue(str(temp_db_file), "test_queue")
     await queue.init()
 
     assert await queue.pop() is None
@@ -51,8 +75,8 @@ async def test_pop_from_empty_queue(temp_db_file):
 @pytest.mark.asyncio
 async def test_queue_isolation(temp_db_file):
     db_file = str(temp_db_file)
-    queue1 = Queue(db_file, "queue_1")
-    queue2 = Queue(db_file, "queue_2")
+    queue1 = SqliteQueue(db_file, "queue_1")
+    queue2 = SqliteQueue(db_file, "queue_2")
 
     await queue1.init()
     await queue2.init()
@@ -86,7 +110,7 @@ async def test_threaded_concurrent_pop(temp_db_file):
     num_tasks = 100
     num_workers = 10
     db_file = str(temp_db_file)
-    queue = Queue(db_file, "concurrent_queue")
+    queue = SqliteQueue(db_file, "concurrent_queue")
     await queue.init()
 
     # Populate the queue
@@ -115,7 +139,7 @@ async def test_threaded_concurrent_pop(temp_db_file):
 
 @pytest.mark.asyncio
 async def test_tasks_generator(temp_db_file):
-    queue = Queue(str(temp_db_file), "test_queue")
+    queue = SqliteQueue(str(temp_db_file), "test_queue")
     await queue.init()
 
     task_1 = Task(
@@ -142,7 +166,9 @@ async def test_tasks_generator(temp_db_file):
 @pytest.mark.asyncio
 async def test_tasks_generator_sleeps(temp_db_file):
     polling_interval = 10.0
-    queue = Queue(str(temp_db_file), "test_queue", polling_interval=polling_interval)
+    queue = SqliteQueue(
+        str(temp_db_file), "test_queue", polling_interval=polling_interval
+    )
     await queue.init()
     tasks_gen = queue.tasks()
 
