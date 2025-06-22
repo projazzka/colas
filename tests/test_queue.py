@@ -18,7 +18,9 @@ def sqlite_queue(sqlite_queue_factory) -> SqliteQueue:
 
 @pytest.fixture
 def postgres_container() -> Iterator[PostgresContainer]:
-    with PostgresContainer("postgres:17-alpine") as postgres:
+    with PostgresContainer("postgres:17-alpine").with_command(
+        "-c max_connections=200"
+    ) as postgres:
         yield postgres
 
 
