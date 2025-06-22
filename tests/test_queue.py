@@ -1,6 +1,7 @@
 import asyncio
 import threading
 import uuid
+from pathlib import Path
 from typing import Iterator
 from unittest.mock import AsyncMock, patch
 
@@ -11,8 +12,8 @@ from colas import PostgresQueue, Queue, SqliteQueue, Task
 
 
 @pytest.fixture
-def sqlite_queue(temp_db_file) -> SqliteQueue:
-    return SqliteQueue(str(temp_db_file), "test_queue")
+def sqlite_queue(sqlite_queue_factory) -> SqliteQueue:
+    return sqlite_queue_factory()
 
 
 @pytest.fixture
@@ -22,13 +23,35 @@ def postgres_container() -> Iterator[PostgresContainer]:
 
 
 @pytest.fixture
-def postgres_queue(postgres_container: PostgresContainer) -> PostgresQueue:
+def postgres_queue(postgres_queue_factory) -> PostgresQueue:
+    return postgres_queue_factory()
+
+
+@pytest.fixture
+def sqlite_queue_factory(temp_db_file: Path):
+    def factory() -> SqliteQueue:
+        return SqliteQueue(str(temp_db_file), "test_queue")
+
+    return factory
+
+
+@pytest.fixture
+def postgres_queue_factory(postgres_container: PostgresContainer):
     dsn = postgres_container.get_connection_url(driver=None)
-    return PostgresQueue(dsn, "test_queue")
+
+    def factory() -> PostgresQueue:
+        return PostgresQueue(dsn, "test_queue")
+
+    return factory
 
 
 @pytest.fixture(params=["sqlite_queue", "postgres_queue"])
 def implementation(request) -> Queue:
+    return request.getfixturevalue(request.param)
+
+
+@pytest.fixture(params=["sqlite_queue_factory", "postgres_queue_factory"])
+def implementation_factory(request):
     return request.getfixturevalue(request.param)
 
 
@@ -94,8 +117,9 @@ async def test_queue_isolation(temp_db_file):
     assert popped_task.task_id == task.task_id
 
 
-def worker(queue, results_list):
+def worker(queue_factory, results_list):
     async def pop_tasks():
+        queue = queue_factory()
         while True:
             task = await queue.pop()
             if task is None:
@@ -106,10 +130,10 @@ def worker(queue, results_list):
 
 
 @pytest.mark.asyncio
-async def test_threaded_concurrent_pop(implementation: Queue):
+async def test_threaded_concurrent_pop(implementation_factory):
     num_tasks = 100
     num_workers = 10
-    queue = implementation
+    queue = implementation_factory()
     await queue.init()
 
     # Populate the queue
@@ -122,7 +146,7 @@ async def test_threaded_concurrent_pop(implementation: Queue):
     results: list[Task] = []
     threads = []
     for _ in range(num_workers):
-        thread = threading.Thread(target=worker, args=(queue, results))
+        thread = threading.Thread(target=worker, args=(implementation_factory, results))
         threads.append(thread)
         thread.start()
 

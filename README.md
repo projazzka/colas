@@ -5,6 +5,10 @@ A modern task queue framework.
   - [X] fully async
   - [X] supports database backends for queues
 
+Supported backends:
+  - Sqlite
+  - Postgres
+
 Author: Igor Prochazka (@projazzka)
 
 ## Installation
