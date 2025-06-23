@@ -1,17 +1,57 @@
 import asyncio
 import uuid
 from datetime import timedelta
+from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from freezegun import freeze_time
+from testcontainers.postgres import PostgresContainer  # type: ignore
 
-from colas import SqliteResults
+from colas import PostgresResults, Results, SqliteResults
+
+
+@pytest.fixture
+def sqlite_results(sqlite_results_factory) -> SqliteResults:
+    return sqlite_results_factory()
+
+
+@pytest.fixture
+def postgres_results(postgres_results_factory) -> PostgresResults:
+    return postgres_results_factory()
+
+
+@pytest.fixture
+def sqlite_results_factory(temp_db_file: Path):
+    def factory() -> SqliteResults:
+        return SqliteResults(str(temp_db_file), "test_results")
+
+    return factory
+
+
+@pytest.fixture
+def postgres_results_factory(postgres_container: PostgresContainer):
+    dsn = postgres_container.get_connection_url(driver=None)
+
+    def factory() -> PostgresResults:
+        return PostgresResults(dsn, "test_results")
+
+    return factory
+
+
+@pytest.fixture(params=["sqlite_results", "postgres_results"])
+def implementation(request) -> Results:
+    return request.getfixturevalue(request.param)
+
+
+@pytest.fixture(params=["sqlite_results_factory", "postgres_results_factory"])
+def implementation_factory(request):
+    return request.getfixturevalue(request.param)
 
 
 @pytest.mark.asyncio
-async def test_store_and_poll(temp_db_file):
-    results = SqliteResults(str(temp_db_file), "test_results")
+async def test_store_and_poll(implementation: Results):
+    results = implementation
     await results.init()
 
     task_id_1 = uuid.uuid4()
@@ -29,8 +69,8 @@ async def test_store_and_poll(temp_db_file):
 
 
 @pytest.mark.asyncio
-async def test_poll_non_existent(temp_db_file):
-    results = SqliteResults(str(temp_db_file), "test_results")
+async def test_poll_non_existent(implementation: Results):
+    results = implementation
     await results.init()
 
     task_id = uuid.uuid4()
@@ -39,8 +79,8 @@ async def test_poll_non_existent(temp_db_file):
 
 
 @pytest.mark.asyncio
-async def test_poll_empty_list(temp_db_file):
-    results = SqliteResults(str(temp_db_file), "test_results")
+async def test_poll_empty_list(implementation: Results):
+    results = implementation
     await results.init()
 
     polled_results = await results.retrieve([])
@@ -48,8 +88,8 @@ async def test_poll_empty_list(temp_db_file):
 
 
 @pytest.mark.asyncio
-async def test_store_and_poll_mixed(temp_db_file):
-    results = SqliteResults(str(temp_db_file), "test_results")
+async def test_store_and_poll_mixed(implementation: Results):
+    results = implementation
     await results.init()
 
     task_id_1 = uuid.uuid4()
@@ -94,9 +134,9 @@ async def test_results_isolation(temp_db_file):
 
 
 @pytest.mark.asyncio
-async def test_clean(temp_db_file):
+async def test_clean(implementation: Results):
     with freeze_time("2023-01-01 12:00:00") as freezer:
-        results = SqliteResults(str(temp_db_file), "test_results")
+        results = implementation
         await results.init()
 
         # Store a result that should be cleaned
@@ -121,8 +161,8 @@ async def test_clean(temp_db_file):
 
 
 @pytest.mark.asyncio
-async def test_wait_for_result_immediate(temp_db_file):
-    results = SqliteResults(str(temp_db_file), "test_results")
+async def test_wait_for_result_immediate(implementation: Results):
+    results = implementation
     await results.init()
 
     task_id = uuid.uuid4()
