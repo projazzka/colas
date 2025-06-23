@@ -23,8 +23,12 @@ def postgres_results(postgres_results_factory) -> PostgresResults:
 
 @pytest.fixture
 def sqlite_results_factory(temp_db_file: Path):
-    def factory() -> SqliteResults:
-        return SqliteResults(str(temp_db_file), "test_results")
+    def factory(
+        polling_interval: float = 0.1, table_name: str = "test_results"
+    ) -> SqliteResults:
+        return SqliteResults(
+            str(temp_db_file), table_name, polling_interval=polling_interval
+        )
 
     return factory
 
@@ -33,8 +37,10 @@ def sqlite_results_factory(temp_db_file: Path):
 def postgres_results_factory(postgres_container: PostgresContainer):
     dsn = postgres_container.get_connection_url(driver=None)
 
-    def factory() -> PostgresResults:
-        return PostgresResults(dsn, "test_results")
+    def factory(
+        polling_interval: float = 0.1, table_name: str = "test_results"
+    ) -> PostgresResults:
+        return PostgresResults(dsn, table_name, polling_interval=polling_interval)
 
     return factory
 
@@ -110,10 +116,9 @@ async def test_store_and_poll_mixed(implementation: Results):
 
 
 @pytest.mark.asyncio
-async def test_results_isolation(temp_db_file):
-    db_file = str(temp_db_file)
-    results1 = SqliteResults(db_file, "results_1")
-    results2 = SqliteResults(db_file, "results_2")
+async def test_results_isolation(implementation_factory):
+    results1 = implementation_factory(table_name="results_1")
+    results2 = implementation_factory(table_name="results_2")
 
     await results1.init()
     await results2.init()
@@ -174,8 +179,8 @@ async def test_wait_for_result_immediate(implementation: Results):
 
 
 @pytest.mark.asyncio
-async def test_wait_for_result_with_polling(temp_db_file):
-    results = SqliteResults(str(temp_db_file), "test_results", polling_interval=10)
+async def test_wait_for_result_with_polling(implementation_factory):
+    results = implementation_factory(polling_interval=10)
     await results.init()
     task_id = uuid.uuid4()
 

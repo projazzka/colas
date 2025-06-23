@@ -22,8 +22,12 @@ class Results(ABC):
     @abstractmethod
     async def clean(self, ttl: int) -> None: ...
 
-    @abstractmethod
-    async def wait(self, task_id: UUID) -> Any: ...
+    async def wait(self, task_id: UUID) -> Any:
+        while True:
+            results = await self.retrieve([task_id])
+            if task_id in results:
+                return results[task_id]
+            await asyncio.sleep(self.polling_interval)
 
     @abstractmethod
     async def retrieve(self, task_ids: list[UUID]) -> dict[UUID, Any]: ...
@@ -69,13 +73,6 @@ class SqliteResults(Results):
                 (cutoff_str,),
             )
             await db.commit()
-
-    async def wait(self, task_id: UUID) -> Any:
-        while True:
-            results = await self.retrieve([task_id])
-            if task_id in results:
-                return results[task_id]
-            await asyncio.sleep(self.polling_interval)
 
     async def retrieve(self, task_ids: list[UUID]) -> dict[UUID, Any]:
         if not task_ids:
@@ -143,13 +140,6 @@ class PostgresResults(Results):
                 f"DELETE FROM {self.table_name} WHERE created_at < $1",
                 cutoff,
             )
-
-    async def wait(self, task_id: UUID) -> Any:
-        while True:
-            results = await self.retrieve([task_id])
-            if task_id in results:
-                return results[task_id]
-            await asyncio.sleep(self.polling_interval)
 
     async def retrieve(self, task_ids: list[UUID]) -> dict[UUID, Any]:
         if not task_ids:
