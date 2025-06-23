@@ -17,18 +17,19 @@ class Colas:
         # Parse DSN and choose backend based on scheme
         parsed = urlparse(dsn)
 
-        if parsed.scheme in ("postgresql", "postgres"):
-            self.queue = PostgresQueue(dsn, "tasks")
-            self.results = PostgresResults(dsn, "results")
-        elif parsed.scheme == "sqlite":
-            # Extract filename from sqlite:// URL
-            filename = parsed.path
-            self.queue = SqliteQueue(filename, "tasks")
-            self.results = SqliteResults(filename, "results")
-        else:
-            # Assume file path for SQLite (no scheme or unknown scheme)
-            self.queue = SqliteQueue(dsn, "tasks")
-            self.results = SqliteResults(dsn, "results")
+        match parsed.scheme:
+            case "postgresql" | "postgres":
+                self.queue = PostgresQueue(dsn, "tasks")
+                self.results = PostgresResults(dsn, "results")
+            case "sqlite":
+                # Extract filename from sqlite:// URL
+                filename = parsed.path
+                self.queue = SqliteQueue(filename, "tasks")
+                self.results = SqliteResults(filename, "results")
+            case _:
+                # Assume file path for SQLite (no scheme or unknown scheme)
+                self.queue = SqliteQueue(dsn, "tasks")
+                self.results = SqliteResults(dsn, "results")
 
     async def init(self) -> None:
         await self.queue.init()
