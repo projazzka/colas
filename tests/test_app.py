@@ -9,7 +9,8 @@ from colas.results import PostgresResults, SqliteResults
 
 @pytest.mark.asyncio
 async def test_happy_path(temp_db_file):
-    app = Colas(str(temp_db_file))
+    # Use sqlite:// URL instead of bare file path
+    app = Colas(f"sqlite://{temp_db_file}")
 
     @app.task
     async def mul(a: int, b: int) -> int:
@@ -29,11 +30,6 @@ async def test_happy_path(temp_db_file):
 
 
 def test_dsn_backend_selection_sqlite(temp_db_file):
-    # Test file path (no scheme)
-    app = Colas(str(temp_db_file))
-    assert isinstance(app.queue, SqliteQueue)
-    assert isinstance(app.results, SqliteResults)
-
     # Test sqlite:// URL with absolute path
     app_url = Colas(f"sqlite://{temp_db_file}")
     assert isinstance(app_url.queue, SqliteQueue)
@@ -62,13 +58,15 @@ def test_dsn_backend_selection_postgres():
     assert isinstance(app_pg3.results, PostgresResults)
 
 
-def test_dsn_parsing_edge_cases():
-    # Test unknown scheme defaults to SQLite
-    app_unknown = Colas("unknown://some/path")
-    assert isinstance(app_unknown.queue, SqliteQueue)
-    assert isinstance(app_unknown.results, SqliteResults)
+def test_dsn_validation_errors():
+    # Test unknown scheme raises ValueError
+    with pytest.raises(ValueError, match="Unsupported DSN"):
+        Colas("unknown://some/path")
 
-    # Test empty scheme defaults to SQLite
-    app_empty = Colas("relative/path/to/file.db")
-    assert isinstance(app_empty.queue, SqliteQueue)
-    assert isinstance(app_empty.results, SqliteResults)
+    # Test missing scheme raises ValueError
+    with pytest.raises(ValueError, match="Unsupported DSN"):
+        Colas("relative/path/to/file.db")
+
+    # Test another unknown scheme
+    with pytest.raises(ValueError, match="Unsupported DSN"):
+        Colas("mysql://user:pass@localhost/db")

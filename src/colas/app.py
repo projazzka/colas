@@ -27,9 +27,7 @@ class Colas:
                 self.queue = SqliteQueue(filename, "tasks")
                 self.results = SqliteResults(filename, "results")
             case _:
-                # Assume file path for SQLite (no scheme or unknown scheme)
-                self.queue = SqliteQueue(dsn, "tasks")
-                self.results = SqliteResults(dsn, "results")
+                raise ValueError(f"Unsupported DSN: {dsn}")
 
     async def init(self) -> None:
         await self.queue.init()
