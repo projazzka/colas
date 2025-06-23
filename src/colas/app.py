@@ -1,17 +1,34 @@
 from typing import Any, Callable, Coroutine
+from urllib.parse import urlparse
 from uuid import uuid4
 
-from .queue import SqliteQueue
-from .results import SqliteResults
+from .queue import PostgresQueue, Queue, SqliteQueue
+from .results import PostgresResults, Results, SqliteResults
 from .task import Task
 
 
 class Colas:
-    def __init__(self, filename: str):
-        self.filename = filename
+    def __init__(self, dsn: str):
+        self.dsn = dsn
         self._tasks: dict[str, Callable[..., Coroutine[Any, Any, Any]]] = {}
-        self.queue = SqliteQueue(self.filename, "tasks")
-        self.results = SqliteResults(self.filename, "results")
+        self.queue: Queue
+        self.results: Results
+
+        # Parse DSN and choose backend based on scheme
+        parsed = urlparse(dsn)
+
+        if parsed.scheme in ("postgresql", "postgres"):
+            self.queue = PostgresQueue(dsn, "tasks")
+            self.results = PostgresResults(dsn, "results")
+        elif parsed.scheme == "sqlite":
+            # Extract filename from sqlite:// URL
+            filename = parsed.path
+            self.queue = SqliteQueue(filename, "tasks")
+            self.results = SqliteResults(filename, "results")
+        else:
+            # Assume file path for SQLite (no scheme or unknown scheme)
+            self.queue = SqliteQueue(dsn, "tasks")
+            self.results = SqliteResults(dsn, "results")
 
     async def init(self) -> None:
         await self.queue.init()
