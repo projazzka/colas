@@ -6,12 +6,12 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from freezegun import freeze_time
 
-from colas import Results
+from colas import SqliteResults
 
 
 @pytest.mark.asyncio
 async def test_store_and_poll(temp_db_file):
-    results = Results(str(temp_db_file), "test_results")
+    results = SqliteResults(str(temp_db_file), "test_results")
     await results.init()
 
     task_id_1 = uuid.uuid4()
@@ -30,7 +30,7 @@ async def test_store_and_poll(temp_db_file):
 
 @pytest.mark.asyncio
 async def test_poll_non_existent(temp_db_file):
-    results = Results(str(temp_db_file), "test_results")
+    results = SqliteResults(str(temp_db_file), "test_results")
     await results.init()
 
     task_id = uuid.uuid4()
@@ -40,7 +40,7 @@ async def test_poll_non_existent(temp_db_file):
 
 @pytest.mark.asyncio
 async def test_poll_empty_list(temp_db_file):
-    results = Results(str(temp_db_file), "test_results")
+    results = SqliteResults(str(temp_db_file), "test_results")
     await results.init()
 
     polled_results = await results.retrieve([])
@@ -49,7 +49,7 @@ async def test_poll_empty_list(temp_db_file):
 
 @pytest.mark.asyncio
 async def test_store_and_poll_mixed(temp_db_file):
-    results = Results(str(temp_db_file), "test_results")
+    results = SqliteResults(str(temp_db_file), "test_results")
     await results.init()
 
     task_id_1 = uuid.uuid4()
@@ -72,8 +72,8 @@ async def test_store_and_poll_mixed(temp_db_file):
 @pytest.mark.asyncio
 async def test_results_isolation(temp_db_file):
     db_file = str(temp_db_file)
-    results1 = Results(db_file, "results_1")
-    results2 = Results(db_file, "results_2")
+    results1 = SqliteResults(db_file, "results_1")
+    results2 = SqliteResults(db_file, "results_2")
 
     await results1.init()
     await results2.init()
@@ -96,7 +96,7 @@ async def test_results_isolation(temp_db_file):
 @pytest.mark.asyncio
 async def test_clean(temp_db_file):
     with freeze_time("2023-01-01 12:00:00") as freezer:
-        results = Results(str(temp_db_file), "test_results")
+        results = SqliteResults(str(temp_db_file), "test_results")
         await results.init()
 
         # Store a result that should be cleaned
@@ -122,7 +122,7 @@ async def test_clean(temp_db_file):
 
 @pytest.mark.asyncio
 async def test_wait_for_result_immediate(temp_db_file):
-    results = Results(str(temp_db_file), "test_results")
+    results = SqliteResults(str(temp_db_file), "test_results")
     await results.init()
 
     task_id = uuid.uuid4()
@@ -135,7 +135,7 @@ async def test_wait_for_result_immediate(temp_db_file):
 
 @pytest.mark.asyncio
 async def test_wait_for_result_with_polling(temp_db_file):
-    results = Results(str(temp_db_file), "test_results", polling_interval=10)
+    results = SqliteResults(str(temp_db_file), "test_results", polling_interval=10)
     await results.init()
     task_id = uuid.uuid4()
 

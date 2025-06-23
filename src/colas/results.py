@@ -1,19 +1,40 @@
 import asyncio
+from abc import ABC, abstractmethod
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, AsyncGenerator
 from uuid import UUID
 
 import aiosqlite
 import msgpack  # type: ignore
 
 
-class Results:
-    def __init__(self, filename: str, table_name: str, polling_interval: float = 0.1):
-        self.filename = filename
-        self.table_name = table_name
+class Results(ABC):
+    def __init__(self, polling_interval: float = 0.1):
         self.polling_interval = polling_interval
 
-    async def init(self):
+    @abstractmethod
+    async def init(self) -> None: ...
+
+    @abstractmethod
+    async def store(self, task_id: UUID, result: Any) -> None: ...
+
+    @abstractmethod
+    async def clean(self, ttl: int) -> None: ...
+
+    @abstractmethod
+    async def wait(self, task_id: UUID) -> Any: ...
+
+    @abstractmethod
+    async def retrieve(self, task_ids: list[UUID]) -> dict[UUID, Any]: ...
+
+
+class SqliteResults(Results):
+    def __init__(self, filename: str, table_name: str, polling_interval: float = 0.1):
+        super().__init__(polling_interval)
+        self.filename = filename
+        self.table_name = table_name
+
+    async def init(self) -> None:
         async with aiosqlite.connect(self.filename) as db:
             await db.execute(
                 f"""
