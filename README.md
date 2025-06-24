@@ -2,8 +2,8 @@
 
 A modern task queue framework.
 
-  - [X] fully async
-  - [X] supports database backends for queues
+  - [x] fully async
+  - [x] supports database backends for queues
 
 Supported backends:
   - Sqlite
@@ -22,7 +22,7 @@ pip install colas
 ```
 from colas import Colas
 
-app = Colas(filename="quincy.db")
+app = Colas("sqlite://./colas.db")
 
 @app.task
 async def multiply(a: int, b: int) -> int:
