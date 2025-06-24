@@ -1,9 +1,10 @@
 # Colas
 
-A modern task queue framework.
+A modern, minimalist task queue framework.
 
   - [x] fully async
   - [x] supports database backends for queues
+  - [x] no crazy inventions for task discovery, logging or configuration
 
 Supported backends:
   - Sqlite
@@ -20,6 +21,8 @@ pip install colas
 ## Usage
 
 ```
+# tasks.py
+
 from colas import Colas
 
 app = Colas("sqlite://./colas.db")
@@ -30,14 +33,14 @@ async def multiply(a: int, b: int) -> int:
 
 
 if __name__ == "__main__":
-    app.run()
+    app.run()  # starts the worker
 ```
 
-On the client side simply do
+On the client side simply call the registered tasks.
 ```
+# main.py
+
 from tasks import multiply
 
-result = await multiply(2, 3)
+result = await multiply(2, 3)  # enqueues the tasks and waits for the response
 ```
-
-
