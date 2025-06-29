@@ -2,8 +2,8 @@ from typing import Any, Callable, Coroutine
 from urllib.parse import urlparse
 from uuid import uuid4
 
-from .queue import PostgresQueue, Queue, SqliteQueue
-from .results import PostgresResults, Results, SqliteResults
+from .queue import Queue
+from .results import Results
 from .task import Task
 
 
@@ -14,15 +14,19 @@ class Colas:
         self.queue: Queue
         self.results: Results
 
-        # Parse DSN and choose backend based on scheme
         parsed = urlparse(dsn)
 
         match parsed.scheme:
             case "postgresql" | "postgres":
+                from .postgres.queue import PostgresQueue  # noqa: WPS433
+                from .postgres.results import PostgresResults  # noqa: WPS433
+
                 self.queue = PostgresQueue(dsn, "tasks")
                 self.results = PostgresResults(dsn, "results")
             case "sqlite":
-                # Extract filename from sqlite:// URL
+                from .sqlite.queue import SqliteQueue  # noqa: WPS433
+                from .sqlite.results import SqliteResults  # noqa: WPS433
+
                 filename = parsed.path
                 self.queue = SqliteQueue(filename, "tasks")
                 self.results = SqliteResults(filename, "results")
@@ -38,7 +42,7 @@ class Colas:
     ) -> Callable[..., Coroutine[Any, Any, Any]]:
         self._tasks[func.__name__] = func
 
-        async def wrapper(*args: Any, **kwargs: Any) -> Any:
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:  # noqa: D401
             return await self._execute_handler(func.__name__, *args, **kwargs)
 
         return wrapper

@@ -8,7 +8,10 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from testcontainers.postgres import PostgresContainer  # type: ignore
 
-from colas import PostgresQueue, Queue, SqliteQueue, Task
+from colas.postgres.queue import PostgresQueue
+from colas.queue import Queue
+from colas.sqlite.queue import SqliteQueue
+from colas.task import Task
 
 
 @pytest.fixture

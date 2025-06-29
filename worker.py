@@ -1,6 +1,6 @@
 import colas
 
-app = colas.Colas(filename="quincy.db")
+app = colas.Colas("sqlite://quincy.db")
 
 
 @app.task
@@ -14,4 +14,6 @@ async def multiply(a: int, b: int) -> int:
 
 
 if __name__ == "__main__":
-    app.run()
+    import asyncio
+
+    asyncio.run(app.run())

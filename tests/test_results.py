@@ -8,7 +8,9 @@ import pytest
 from freezegun import freeze_time
 from testcontainers.postgres import PostgresContainer  # type: ignore
 
-from colas import PostgresResults, Results, SqliteResults
+from colas.postgres.results import PostgresResults
+from colas.results import Results
+from colas.sqlite.results import SqliteResults
 
 
 @pytest.fixture

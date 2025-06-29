@@ -3,8 +3,10 @@ import asyncio
 import pytest
 
 from colas import Colas
-from colas.queue import PostgresQueue, SqliteQueue
-from colas.results import PostgresResults, SqliteResults
+from colas.postgres.queue import PostgresQueue
+from colas.postgres.results import PostgresResults
+from colas.sqlite.queue import SqliteQueue
+from colas.sqlite.results import SqliteResults
 
 
 @pytest.mark.asyncio

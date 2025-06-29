@@ -106,14 +106,22 @@ name = "colas"
 version = "0.1.2"
 source = { editable = "." }
 dependencies = [
-    { name = "aiosqlite" },
     { name = "asyncio" },
-    { name = "asyncpg" },
     { name = "msgpack" },
+]
+
+[package.optional-dependencies]
+postgresql = [
+    { name = "asyncpg" },
+]
+sqlite = [
+    { name = "aiosqlite" },
 ]
 
 [package.dev-dependencies]
 dev = [
+    { name = "aiosqlite" },
+    { name = "asyncpg" },
     { name = "build" },
     { name = "freezegun" },
     { name = "psycopg2-binary" },
@@ -125,14 +133,16 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiosqlite", specifier = ">=0.21.0" },
+    { name = "aiosqlite", marker = "extra == 'sqlite'", specifier = ">=0.21.0" },
     { name = "asyncio", specifier = ">=3.4.3" },
-    { name = "asyncpg", specifier = ">=0.30.0" },
+    { name = "asyncpg", marker = "extra == 'postgresql'", specifier = ">=0.30.0" },
     { name = "msgpack", specifier = ">=1.1.1" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "aiosqlite", specifier = ">=0.21.0" },
+    { name = "asyncpg", specifier = ">=0.30.0" },
     { name = "build", specifier = ">=1.2.2.post1" },
     { name = "freezegun", specifier = ">=1.5.2" },
     { name = "psycopg2-binary", specifier = ">=2.9.10" },
