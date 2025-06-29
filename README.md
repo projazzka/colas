@@ -15,7 +15,8 @@ Author: Igor Prochazka (@projazzka)
 ## Installation
 
 ```
-pip install colas
+pip install colas[sqlite]  # For Sqlite backend
+pip install colas[postgresql]  # For Postgresql backend
 ```
 
 ## Usage

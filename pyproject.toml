@@ -9,9 +9,7 @@ authors = [
 ]
 requires-python = ">=3.13"
 dependencies = [
-    "aiosqlite>=0.21.0",
     "asyncio>=3.4.3",
-    "asyncpg>=0.30.0",
     "msgpack>=1.1.1",
 ]
 
@@ -32,3 +30,7 @@ dev-dependencies = [
     "testcontainers>=4.10.0",
     "psycopg2-binary>=2.9.10",
 ]
+
+[project.optional-dependencies]
+postgresql = ["asyncpg>=0.30.0"]
+sqlite = ["aiosqlite>=0.21.0"]
