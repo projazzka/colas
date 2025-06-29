@@ -2,7 +2,6 @@ import asyncio
 import threading
 import uuid
 from pathlib import Path
-from typing import Iterator
 from unittest.mock import AsyncMock, patch
 
 import pytest

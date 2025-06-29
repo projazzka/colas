@@ -1,11 +1,9 @@
-from __future__ import annotations
-
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
-import asyncpg  # type: ignore
-import msgpack  # type: ignore
+import asyncpg  # type: ignore[import-untyped]
+import msgpack  # type: ignore[import-untyped]
 
 from ..results import Results
 
