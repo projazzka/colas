@@ -4,7 +4,7 @@ from typing import Any
 from uuid import UUID
 
 
-class Results(ABC):
+class Stream(ABC):
     def __init__(self, polling_interval: float = 0.1):
         self.polling_interval = polling_interval
 
@@ -28,4 +28,4 @@ class Results(ABC):
     async def retrieve(self, task_ids: list[UUID]) -> dict[UUID, Any]: ...
 
 
-__all__: list[str] = ["Results"]
+__all__: list[str] = ["Stream"]

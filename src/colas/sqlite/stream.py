@@ -5,12 +5,12 @@ from uuid import UUID
 import aiosqlite  # type: ignore
 import msgpack  # type: ignore
 
-from ..results import Results
+from ..stream import Stream
 
-__all__ = ["SqliteResults"]
+__all__ = ["SqliteStream"]
 
 
-class SqliteResults(Results):
+class SqliteStream(Stream):
     def __init__(self, filename: str, table_name: str, polling_interval: float = 0.1):
         super().__init__(polling_interval)
         self.filename = filename

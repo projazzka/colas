@@ -5,12 +5,12 @@ from uuid import UUID
 import asyncpg  # type: ignore[import-untyped]
 import msgpack  # type: ignore[import-untyped]
 
-from ..results import Results
+from ..stream import Stream
 
-__all__ = ["PostgresResults"]
+__all__ = ["PostgresStream"]
 
 
-class PostgresResults(Results):
+class PostgresStream(Stream):
     def __init__(self, dsn: str, table_name: str, polling_interval: float = 0.1):
         super().__init__(polling_interval)
         self.dsn = dsn

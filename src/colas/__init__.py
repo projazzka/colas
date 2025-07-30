@@ -1,11 +1,11 @@
 from .app import Colas
 from .queue import Queue
-from .results import Results
+from .stream import Stream
 from .task import Task
 
 __all__ = [
     "Colas",
     "Queue",
-    "Results",
+    "Stream",
     "Task",
 ]

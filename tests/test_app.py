@@ -4,9 +4,9 @@ import pytest
 
 from colas import Colas
 from colas.postgres.queue import PostgresQueue
-from colas.postgres.results import PostgresResults
+from colas.postgres.stream import PostgresStream
 from colas.sqlite.queue import SqliteQueue
-from colas.sqlite.results import SqliteResults
+from colas.sqlite.stream import SqliteStream
 
 
 @pytest.mark.asyncio
@@ -35,29 +35,29 @@ def test_dsn_backend_selection_sqlite(temp_db_file):
     # Test sqlite:// URL with absolute path
     app_url = Colas(f"sqlite://{temp_db_file}")
     assert isinstance(app_url.queue, SqliteQueue)
-    assert isinstance(app_url.results, SqliteResults)
+    assert isinstance(app_url.results, SqliteStream)
 
     # Test sqlite:// URL with relative path
     app_rel = Colas("sqlite://./test.db")
     assert isinstance(app_rel.queue, SqliteQueue)
-    assert isinstance(app_rel.results, SqliteResults)
+    assert isinstance(app_rel.results, SqliteStream)
 
 
 def test_dsn_backend_selection_postgres():
     # Test postgresql:// URL
     app_pg = Colas("postgresql://user:pass@localhost/db")
     assert isinstance(app_pg.queue, PostgresQueue)
-    assert isinstance(app_pg.results, PostgresResults)
+    assert isinstance(app_pg.results, PostgresStream)
 
     # Test postgres:// URL (alternative format)
     app_pg2 = Colas("postgres://user:pass@localhost/db")
     assert isinstance(app_pg2.queue, PostgresQueue)
-    assert isinstance(app_pg2.results, PostgresResults)
+    assert isinstance(app_pg2.results, PostgresStream)
 
     # Test postgresql:// with port
     app_pg3 = Colas("postgresql://user:pass@localhost:5432/db")
     assert isinstance(app_pg3.queue, PostgresQueue)
-    assert isinstance(app_pg3.results, PostgresResults)
+    assert isinstance(app_pg3.results, PostgresStream)
 
 
 def test_dsn_validation_errors():

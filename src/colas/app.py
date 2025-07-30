@@ -3,7 +3,7 @@ from urllib.parse import urlparse
 from uuid import uuid4
 
 from .queue import Queue
-from .results import Results
+from .stream import Stream
 from .task import Task
 
 
@@ -12,24 +12,24 @@ class Colas:
         self.dsn = dsn
         self._tasks: dict[str, Callable[..., Coroutine[Any, Any, Any]]] = {}
         self.queue: Queue
-        self.results: Results
+        self.results: Stream
 
         parsed = urlparse(dsn)
 
         match parsed.scheme:
             case "postgresql" | "postgres":
                 from .postgres.queue import PostgresQueue  # noqa: WPS433
-                from .postgres.results import PostgresResults  # noqa: WPS433
+                from .postgres.stream import PostgresStream  # noqa: WPS433
 
                 self.queue = PostgresQueue(dsn, "tasks")
-                self.results = PostgresResults(dsn, "results")
+                self.results = PostgresStream(dsn, "results")
             case "sqlite":
                 from .sqlite.queue import SqliteQueue  # noqa: WPS433
-                from .sqlite.results import SqliteResults  # noqa: WPS433
+                from .sqlite.stream import SqliteStream  # noqa: WPS433
 
                 filename = parsed.path
                 self.queue = SqliteQueue(filename, "tasks")
-                self.results = SqliteResults(filename, "results")
+                self.results = SqliteStream(filename, "results")
             case _:
                 raise ValueError(f"Unsupported DSN: {dsn}")
 
