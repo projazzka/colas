@@ -11,19 +11,12 @@ __all__ = ["PostgresStream"]
 
 
 class PostgresStream(Stream):
-    def __init__(self, dsn: str, polling_interval: float = 0.1):
+    def __init__(self, pool: asyncpg.Pool, polling_interval: float = 0.1):
         super().__init__(polling_interval)
-        self.dsn = dsn
-        self._pool: asyncpg.Pool | None = None
-
-    async def pool(self) -> asyncpg.Pool:
-        if self._pool is None:
-            self._pool = await asyncpg.create_pool(self.dsn)
-        return self._pool
+        self._pool = pool
 
     async def init(self, tables: list[str]) -> None:
-        pool = await self.pool()
-        async with pool.acquire() as connection:
+        async with self._pool.acquire() as connection:
             for table in tables:
                 await connection.execute(
                     f"""
@@ -39,8 +32,7 @@ class PostgresStream(Stream):
         payload = msgpack.packb(result)
         created_at = datetime.now(timezone.utc)
 
-        pool = await self.pool()
-        async with pool.acquire() as connection:
+        async with self._pool.acquire() as connection:
             await connection.execute(
                 f"INSERT INTO {table} (task_id, payload, created_at) VALUES ($1, $2, $3)",
                 task_id,
@@ -51,8 +43,7 @@ class PostgresStream(Stream):
     async def clean(self, table: str, ttl: int) -> None:
         cutoff = datetime.now(timezone.utc) - timedelta(seconds=ttl)
 
-        pool = await self.pool()
-        async with pool.acquire() as connection:
+        async with self._pool.acquire() as connection:
             await connection.execute(
                 f"DELETE FROM {table} WHERE created_at < $1",
                 cutoff,
@@ -62,8 +53,7 @@ class PostgresStream(Stream):
         if not task_ids:
             return {}
 
-        pool = await self.pool()
-        async with pool.acquire() as connection:
+        async with self._pool.acquire() as connection:
             rows = await connection.fetch(
                 f"SELECT task_id, payload FROM {table} WHERE task_id = ANY($1)",
                 task_ids,

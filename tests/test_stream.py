@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
+import pytest_asyncio
 from freezegun import freeze_time
 from testcontainers.postgres import PostgresContainer  # type: ignore
 
@@ -13,19 +14,19 @@ from colas.sqlite.stream import SqliteStream
 from colas.stream import Stream
 
 
-@pytest.fixture
-def sqlite_stream(sqlite_stream_factory) -> SqliteStream:
-    return sqlite_stream_factory()
+@pytest_asyncio.fixture
+async def sqlite_stream(sqlite_stream_factory) -> SqliteStream:
+    return await sqlite_stream_factory()
 
 
-@pytest.fixture
-def postgres_stream(postgres_stream_factory) -> PostgresStream:
-    return postgres_stream_factory()
+@pytest_asyncio.fixture
+async def postgres_stream(postgres_stream_factory) -> PostgresStream:
+    return await postgres_stream_factory()
 
 
 @pytest.fixture
 def sqlite_stream_factory(temp_db_file: Path):
-    def factory(polling_interval: float = 0.1) -> SqliteStream:
+    async def factory(polling_interval: float = 0.1) -> SqliteStream:
         return SqliteStream(str(temp_db_file), polling_interval=polling_interval)
 
     return factory
@@ -35,8 +36,11 @@ def sqlite_stream_factory(temp_db_file: Path):
 def postgres_stream_factory(postgres_container: PostgresContainer):
     dsn = postgres_container.get_connection_url(driver=None)
 
-    def factory(polling_interval: float = 0.1) -> PostgresStream:
-        return PostgresStream(dsn, polling_interval=polling_interval)
+    async def factory(polling_interval: float = 0.1) -> PostgresStream:
+        from colas.postgres.connection import create_connection_pool
+
+        pool = await create_connection_pool(dsn)
+        return PostgresStream(pool, polling_interval=polling_interval)
 
     return factory
 
@@ -115,8 +119,7 @@ async def test_store_and_poll_mixed(implementation: Stream):
 
 @pytest.mark.asyncio
 async def test_stream_isolation(implementation_factory):
-    stream_impl = implementation_factory()
-
+    stream_impl = await implementation_factory()
     await stream_impl.init(["stream_1", "stream_2"])
 
     # Store a result in the first table
@@ -178,7 +181,7 @@ async def test_wait_for_result_immediate(implementation: Stream):
 
 @pytest.mark.asyncio
 async def test_wait_for_result_with_polling(implementation_factory):
-    stream_impl = implementation_factory(polling_interval=10)
+    stream_impl = await implementation_factory(polling_interval=10)
     await stream_impl.init(["test_stream"])
     task_id = uuid.uuid4()
 

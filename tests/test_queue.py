@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
+import pytest_asyncio
 from testcontainers.postgres import PostgresContainer  # type: ignore
 
 from colas.postgres.queue import PostgresQueue
@@ -13,19 +14,19 @@ from colas.sqlite.queue import SqliteQueue
 from colas.task import Task
 
 
-@pytest.fixture
-def sqlite_queue(sqlite_queue_factory) -> SqliteQueue:
-    return sqlite_queue_factory()
+@pytest_asyncio.fixture
+async def sqlite_queue(sqlite_queue_factory) -> SqliteQueue:
+    return await sqlite_queue_factory()
 
 
-@pytest.fixture
-def postgres_queue(postgres_queue_factory) -> PostgresQueue:
-    return postgres_queue_factory()
+@pytest_asyncio.fixture
+async def postgres_queue(postgres_queue_factory) -> PostgresQueue:
+    return await postgres_queue_factory()
 
 
 @pytest.fixture
 def sqlite_queue_factory(temp_db_file: Path):
-    def factory() -> SqliteQueue:
+    async def factory() -> SqliteQueue:
         return SqliteQueue(str(temp_db_file))
 
     return factory
@@ -35,8 +36,11 @@ def sqlite_queue_factory(temp_db_file: Path):
 def postgres_queue_factory(postgres_container: PostgresContainer):
     dsn = postgres_container.get_connection_url(driver=None)
 
-    def factory() -> PostgresQueue:
-        return PostgresQueue(dsn)
+    async def factory() -> PostgresQueue:
+        from colas.postgres.connection import create_connection_pool
+
+        pool = await create_connection_pool(dsn)
+        return PostgresQueue(pool)
 
     return factory
 
@@ -113,7 +117,7 @@ async def test_queue_isolation(temp_db_file):
 
 def worker(queue_factory, results_list):
     async def pop_tasks():
-        queue_impl = queue_factory()
+        queue_impl = await queue_factory()
         while True:
             task = await queue_impl.pop("test_queue")
             if task is None:
@@ -127,7 +131,7 @@ def worker(queue_factory, results_list):
 async def test_threaded_concurrent_pop(implementation_factory):
     num_tasks = 100
     num_workers = 10
-    queue_impl = implementation_factory()
+    queue_impl = await implementation_factory()
     await queue_impl.init(["test_queue"])
 
     # Populate the queue

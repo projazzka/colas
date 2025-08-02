@@ -8,21 +8,24 @@ from .task import Task
 
 
 class Colas:
-    def __init__(self, dsn: str):
-        self.dsn = dsn
+    def __init__(self):
         self._tasks: dict[str, Callable[..., Coroutine[Any, Any, Any]]] = {}
-        self.queue: Queue
-        self.results: Stream
+        self.queue: Queue | None = None
+        self.results: Stream | None = None
 
+    async def connect(self, dsn: str) -> None:
+        """Create and connect queue and results instances."""
         parsed = urlparse(dsn)
 
         match parsed.scheme:
             case "postgresql" | "postgres":
+                from .postgres.connection import create_connection_pool  # noqa: WPS433
                 from .postgres.queue import PostgresQueue  # noqa: WPS433
                 from .postgres.stream import PostgresStream  # noqa: WPS433
 
-                self.queue = PostgresQueue(dsn)
-                self.results = PostgresStream(dsn)
+                pool = await create_connection_pool(dsn)
+                self.queue = PostgresQueue(pool)
+                self.results = PostgresStream(pool)
             case "sqlite":
                 from .sqlite.queue import SqliteQueue  # noqa: WPS433
                 from .sqlite.stream import SqliteStream  # noqa: WPS433
@@ -34,6 +37,10 @@ class Colas:
                 raise ValueError(f"Unsupported DSN: {dsn}")
 
     async def init(self) -> None:
+        """Initialize queue and results tables/schemas."""
+        if self.queue is None or self.results is None:
+            raise RuntimeError("Must call connect() before init()")
+
         await self.queue.init(["tasks"])
         await self.results.init(["results"])
 
@@ -48,6 +55,9 @@ class Colas:
         return wrapper
 
     async def _execute_handler(self, name: str, *args: Any, **kwargs: Any) -> Any:
+        if self.queue is None or self.results is None:
+            raise RuntimeError("Must call connect() before using tasks")
+
         task = Task(
             task_id=uuid4(),
             name=name,
@@ -58,6 +68,9 @@ class Colas:
         return await self.results.wait("results", task.task_id)
 
     async def run(self) -> None:
+        if self.queue is None or self.results is None:
+            raise RuntimeError("Must call connect() before running")
+
         async for task in self.queue.tasks("tasks"):
             func = self._tasks[task.name]
             result = await func(*task.args, **task.kwargs)
