@@ -39,13 +39,13 @@ async def test_dsn_backend_selection_sqlite(temp_db_file):
     app_url = Colas()
     await app_url.connect(f"sqlite://{temp_db_file}")
     assert isinstance(app_url.queue, SqliteQueue)
-    assert isinstance(app_url.results, SqliteStream)
+    assert isinstance(app_url.stream, SqliteStream)
 
     # Test sqlite:// URL with relative path
     app_rel = Colas()
     await app_rel.connect("sqlite://./test.db")
     assert isinstance(app_rel.queue, SqliteQueue)
-    assert isinstance(app_rel.results, SqliteStream)
+    assert isinstance(app_rel.stream, SqliteStream)
 
 
 class MockConnection:
@@ -89,19 +89,19 @@ async def test_dsn_backend_selection_postgres():
         app_pg = Colas()
         await app_pg.connect("postgresql://user:pass@localhost/db")
         assert isinstance(app_pg.queue, PostgresQueue)
-        assert isinstance(app_pg.results, PostgresStream)
+        assert isinstance(app_pg.stream, PostgresStream)
 
         # Test postgres:// URL (alternative format)
         app_pg2 = Colas()
         await app_pg2.connect("postgres://user:pass@localhost/db")
         assert isinstance(app_pg2.queue, PostgresQueue)
-        assert isinstance(app_pg2.results, PostgresStream)
+        assert isinstance(app_pg2.stream, PostgresStream)
 
         # Test postgresql:// with port
         app_pg3 = Colas()
         await app_pg3.connect("postgresql://user:pass@localhost:5432/db")
         assert isinstance(app_pg3.queue, PostgresQueue)
-        assert isinstance(app_pg3.results, PostgresStream)
+        assert isinstance(app_pg3.stream, PostgresStream)
 
 
 @pytest.mark.asyncio
