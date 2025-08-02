@@ -10,10 +10,9 @@ __all__ = ["PostgresQueue"]
 
 
 class PostgresQueue(Queue):
-    def __init__(self, dsn: str, queue_name: str, polling_interval: float = 0.1):
+    def __init__(self, dsn: str, polling_interval: float = 0.1):
         super().__init__(polling_interval)
         self.dsn = dsn
-        self.queue_name = queue_name
         self._pool: asyncpg.Pool | None = None
 
     async def pool(self) -> asyncpg.Pool:
@@ -21,42 +20,43 @@ class PostgresQueue(Queue):
             self._pool = await asyncpg.create_pool(self.dsn)
         return self._pool
 
-    async def init(self) -> None:
+    async def init(self, queues: list[str]) -> None:
         pool = await self.pool()
         async with pool.acquire() as connection:
-            await connection.execute(
-                f"""
-                CREATE TABLE IF NOT EXISTS {self.queue_name} (
-                    position BIGSERIAL PRIMARY KEY,
-                    task_id UUID NOT NULL,
-                    payload BYTEA NOT NULL
+            for queue in queues:
+                await connection.execute(
+                    f"""
+                    CREATE TABLE IF NOT EXISTS {queue} (
+                        position BIGSERIAL PRIMARY KEY,
+                        task_id UUID NOT NULL,
+                        payload BYTEA NOT NULL
+                    )
+                """
                 )
-            """
-            )
 
-    async def push(self, task: Task) -> None:
+    async def push(self, queue: str, task: Task) -> None:
         payload = msgpack.packb((task.name, task.args, task.kwargs))
         pool = await self.pool()
         async with pool.acquire() as connection:
             await connection.execute(
-                f"INSERT INTO {self.queue_name} (task_id, payload) VALUES ($1, $2)",
+                f"INSERT INTO {queue} (task_id, payload) VALUES ($1, $2)",
                 task.task_id,
                 payload,
             )
 
-    async def pop(self) -> Task | None:
+    async def pop(self, queue: str) -> Task | None:
         pool = await self.pool()
         async with pool.acquire() as connection:
             row = await connection.fetchrow(
                 f"""
                 WITH oldest AS (
                     SELECT position, task_id, payload
-                    FROM {self.queue_name}
+                    FROM {queue}
                     ORDER BY position ASC
                     LIMIT 1
                     FOR UPDATE SKIP LOCKED
                 )
-                DELETE FROM {self.queue_name}
+                DELETE FROM {queue}
                 WHERE position IN (SELECT position FROM oldest)
                 RETURNING task_id, payload
                 """

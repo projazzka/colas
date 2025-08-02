@@ -21,20 +21,20 @@ class Colas:
                 from .postgres.queue import PostgresQueue  # noqa: WPS433
                 from .postgres.stream import PostgresStream  # noqa: WPS433
 
-                self.queue = PostgresQueue(dsn, "tasks")
+                self.queue = PostgresQueue(dsn)
                 self.results = PostgresStream(dsn, "results")
             case "sqlite":
                 from .sqlite.queue import SqliteQueue  # noqa: WPS433
                 from .sqlite.stream import SqliteStream  # noqa: WPS433
 
                 filename = parsed.path
-                self.queue = SqliteQueue(filename, "tasks")
+                self.queue = SqliteQueue(filename)
                 self.results = SqliteStream(filename, "results")
             case _:
                 raise ValueError(f"Unsupported DSN: {dsn}")
 
     async def init(self) -> None:
-        await self.queue.init()
+        await self.queue.init(["tasks"])
         await self.results.init()
 
     def task(
@@ -54,11 +54,11 @@ class Colas:
             args=args,
             kwargs=kwargs,
         )
-        await self.queue.push(task)
+        await self.queue.push("tasks", task)
         return await self.results.wait(task.task_id)
 
     async def run(self) -> None:
-        async for task in self.queue.tasks():
+        async for task in self.queue.tasks("tasks"):
             func = self._tasks[task.name]
             result = await func(*task.args, **task.kwargs)
             await self.results.store(task.task_id, result)

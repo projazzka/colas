@@ -10,17 +10,17 @@ class Queue(ABC):
         self.polling_interval = polling_interval
 
     @abstractmethod
-    async def init(self) -> None: ...
+    async def init(self, queues: list[str]) -> None: ...
 
     @abstractmethod
-    async def push(self, task: Task) -> None: ...
+    async def push(self, queue: str, task: Task) -> None: ...
 
     @abstractmethod
-    async def pop(self) -> Task | None: ...
+    async def pop(self, queue: str) -> Task | None: ...
 
-    async def tasks(self) -> AsyncGenerator[Task, None]:
+    async def tasks(self, queue: str) -> AsyncGenerator[Task, None]:
         while True:
-            task = await self.pop()
+            task = await self.pop(queue)
             if task:
                 yield task
             else:

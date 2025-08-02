@@ -26,7 +26,7 @@ def postgres_queue(postgres_queue_factory) -> PostgresQueue:
 @pytest.fixture
 def sqlite_queue_factory(temp_db_file: Path):
     def factory() -> SqliteQueue:
-        return SqliteQueue(str(temp_db_file), "test_queue")
+        return SqliteQueue(str(temp_db_file))
 
     return factory
 
@@ -36,7 +36,7 @@ def postgres_queue_factory(postgres_container: PostgresContainer):
     dsn = postgres_container.get_connection_url(driver=None)
 
     def factory() -> PostgresQueue:
-        return PostgresQueue(dsn, "test_queue")
+        return PostgresQueue(dsn)
 
     return factory
 
@@ -53,71 +53,69 @@ def implementation_factory(request):
 
 @pytest.mark.asyncio
 async def test_push_and_pop(implementation: Queue):
-    queue = implementation
-    await queue.init()
+    queue_impl = implementation
+    await queue_impl.init(["test_queue"])
 
     task_1 = Task(
         task_id=uuid.uuid4(), name="test_task_1", args=(1, 2), kwargs={"a": 3}
     )
-    await queue.push(task_1)
+    await queue_impl.push("test_queue", task_1)
 
     task_2 = Task(
         task_id=uuid.uuid4(), name="test_task_2", args=(4, 5), kwargs={"b": 6}
     )
-    await queue.push(task_2)
+    await queue_impl.push("test_queue", task_2)
 
-    popped_task_1 = await queue.pop()
+    popped_task_1 = await queue_impl.pop("test_queue")
     assert popped_task_1 is not None
     assert popped_task_1.task_id == task_1.task_id
     assert popped_task_1.name == "test_task_1"
     assert popped_task_1.args == (1, 2)
     assert popped_task_1.kwargs == {"a": 3}
 
-    popped_task_2 = await queue.pop()
+    popped_task_2 = await queue_impl.pop("test_queue")
     assert popped_task_2 is not None
     assert popped_task_2.task_id == task_2.task_id
     assert popped_task_2.name == "test_task_2"
     assert popped_task_2.args == (4, 5)
     assert popped_task_2.kwargs == {"b": 6}
 
-    assert await queue.pop() is None
+    assert await queue_impl.pop("test_queue") is None
 
 
 @pytest.mark.asyncio
 async def test_pop_from_empty_queue(implementation: Queue):
-    queue = implementation
-    await queue.init()
+    queue_impl = implementation
+    await queue_impl.init(["test_queue"])
 
-    assert await queue.pop() is None
+    assert await queue_impl.pop("test_queue") is None
 
 
 @pytest.mark.asyncio
 async def test_queue_isolation(temp_db_file):
     db_file = str(temp_db_file)
-    queue1 = SqliteQueue(db_file, "queue_1")
-    queue2 = SqliteQueue(db_file, "queue_2")
+    queue_impl = SqliteQueue(db_file)
 
-    await queue1.init()
-    await queue2.init()
+    await queue_impl.init(["queue_1", "queue_2"])
 
     # Push to the first queue
     task = Task(task_id=uuid.uuid4(), name="test_task", args=(), kwargs={})
-    await queue1.push(task)
+    await queue_impl.push("queue_1", task)
 
     # The second queue should be empty
-    assert await queue2.pop() is None
+    assert await queue_impl.pop("queue_2") is None
 
     # The first queue should have the task
-    popped_task = await queue1.pop()
+    popped_task = await queue_impl.pop("queue_1")
     assert popped_task is not None
     assert popped_task.task_id == task.task_id
 
 
 def worker(queue_factory, results_list):
     async def pop_tasks():
-        queue = queue_factory()
+        queue_impl = queue_factory()
         while True:
-            task = await queue.pop()
+            task = await queue_impl.pop("test_queue")
             if task is None:
                 break
             results_list.append(task)
@@ -129,15 +127,15 @@ def worker(queue_factory, results_list):
 async def test_threaded_concurrent_pop(implementation_factory):
     num_tasks = 100
     num_workers = 10
-    queue = implementation_factory()
-    await queue.init()
+    queue_impl = implementation_factory()
+    await queue_impl.init(["test_queue"])
 
     # Populate the queue
     task_ids = []
     for i in range(num_tasks):
         task = Task(task_id=uuid.uuid4(), name=str(i), args=(), kwargs={})
         task_ids.append(task.task_id)
-        await queue.push(task)
+        await queue_impl.push("test_queue", task)
 
     results: list[Task] = []
     threads = []
@@ -158,21 +156,21 @@ async def test_threaded_concurrent_pop(implementation_factory):
 
 @pytest.mark.asyncio
 async def test_tasks_generator(implementation: Queue):
-    queue = implementation
-    await queue.init()
+    queue_impl = implementation
+    await queue_impl.init(["test_queue"])
 
     task_1 = Task(
         task_id=uuid.uuid4(), name="test_task_1", args=(1, 2), kwargs={"a": 3}
     )
-    await queue.push(task_1)
+    await queue_impl.push("test_queue", task_1)
 
     task_2 = Task(
         task_id=uuid.uuid4(), name="test_task_2", args=(4, 5), kwargs={"b": 6}
     )
-    await queue.push(task_2)
+    await queue_impl.push("test_queue", task_2)
 
     received_tasks = []
-    async for task in queue.tasks():
+    async for task in queue_impl.tasks("test_queue"):
         received_tasks.append(task)
         if len(received_tasks) == 2:
             break
@@ -186,9 +184,9 @@ async def test_tasks_generator(implementation: Queue):
 async def test_tasks_generator_sleeps(implementation: Queue):
     polling_interval = 10.0
     implementation.polling_interval = polling_interval
-    queue = implementation
-    await queue.init()
-    tasks_gen = queue.tasks()
+    queue_impl = implementation
+    await queue_impl.init(["test_queue"])
+    tasks_gen = queue_impl.tasks("test_queue")
 
     class StopLoop(Exception):
         pass
