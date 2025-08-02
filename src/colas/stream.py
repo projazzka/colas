@@ -9,23 +9,23 @@ class Stream(ABC):
         self.polling_interval = polling_interval
 
     @abstractmethod
-    async def init(self) -> None: ...
+    async def init(self, tables: list[str]) -> None: ...
 
     @abstractmethod
-    async def store(self, task_id: UUID, result: Any) -> None: ...
+    async def store(self, table: str, task_id: UUID, result: Any) -> None: ...
 
     @abstractmethod
-    async def clean(self, ttl: int) -> None: ...
+    async def clean(self, table: str, ttl: int) -> None: ...
 
-    async def wait(self, task_id: UUID) -> Any:
+    async def wait(self, table: str, task_id: UUID) -> Any:
         while True:
-            results = await self.retrieve([task_id])
+            results = await self.retrieve(table, [task_id])
             if task_id in results:
                 return results[task_id]
             await asyncio.sleep(self.polling_interval)
 
     @abstractmethod
-    async def retrieve(self, task_ids: list[UUID]) -> dict[UUID, Any]: ...
+    async def retrieve(self, table: str, task_ids: list[UUID]) -> dict[UUID, Any]: ...
 
 
 __all__: list[str] = ["Stream"]
